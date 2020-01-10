@@ -20,7 +20,6 @@ import static com.jogamp.opengl.GL.GL_ARRAY_BUFFER;
 import static com.jogamp.opengl.GL.GL_DEPTH_BUFFER_BIT;
 import static com.jogamp.opengl.GL.GL_DEPTH_TEST;
 import static com.jogamp.opengl.GL.GL_FLOAT;
-import static com.jogamp.opengl.GL.GL_FRONT_AND_BACK;
 import static com.jogamp.opengl.GL.GL_LEQUAL;
 import static com.jogamp.opengl.GL.GL_STATIC_DRAW;
 import static com.jogamp.opengl.GL.GL_TRIANGLES;
@@ -30,7 +29,6 @@ import static com.jogamp.opengl.GL2ES2.GL_LINK_STATUS;
 import static com.jogamp.opengl.GL2ES2.GL_VERTEX_SHADER;
 
 import static com.jogamp.opengl.GL2ES3.GL_COLOR;
-import static com.jogamp.opengl.GL2GL3.GL_LINE;
 import static graphicslib3D.GLSLUtils.checkOpenGLError;
 import static graphicslib3D.GLSLUtils.printProgramLog;
 import static graphicslib3D.GLSLUtils.printShaderLog;
@@ -54,7 +52,7 @@ public class Main extends JFrame implements GLEventListener {
         caps.setNumSamples(8);
 
         setTitle("Game");
-        setSize(600, 400);
+        setSize(800, 600);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         myCanvas = new GLCanvas(caps);
@@ -62,7 +60,7 @@ public class Main extends JFrame implements GLEventListener {
         this.add(myCanvas);
         setVisible(true);
 
-        animator = new FPSAnimator(myCanvas, 30);
+        animator = new FPSAnimator(myCanvas, 60);
         animator.start();
     }
 
@@ -75,8 +73,8 @@ public class Main extends JFrame implements GLEventListener {
 
         rendering_program = createShaderProgram(glAutoDrawable);
         setupVertices();
-        cameraX = 0.0f; cameraY = 0.0f; cameraZ = 20.0f;
-        cubeLocX = 0.0f; cubeLocY = -2.0f; cubeLocZ = 0.0f;
+        cameraX = 0.0f; cameraY = 0.0f; cameraZ = 1000.0f;
+        cubeLocX = 0.0f; cubeLocY = -2.0f; cubeLocZ = -4.0f;
         float aspect = (float) myCanvas.getWidth() / (float) myCanvas.getHeight();
         pMat = perspective(60.0f, aspect, 0.1f, 1000.0f);
     }
@@ -87,10 +85,10 @@ public class Main extends JFrame implements GLEventListener {
 
     public void display(GLAutoDrawable glAutoDrawable) {
         GL4 gl = (GL4) GLContext.getCurrentGL();
-        double t = (double) System.currentTimeMillis() / 10000.0;
+        double t = (double) (System.currentTimeMillis() % 3600000) / 10000.0;
         gl.glClear(GL_DEPTH_BUFFER_BIT);
 
-        float bkg[] = {0.0f, 0.0f, 0.0f, 1.0f};
+        float bkg[] = { 0.0f, 0.0f, 0.0f, 1.0f };
         FloatBuffer bkgBuffer = Buffers.newDirectFloatBuffer(bkg);
         gl.glClearBufferfv(GL_COLOR, 0, bkgBuffer);
 
@@ -98,38 +96,31 @@ public class Main extends JFrame implements GLEventListener {
 
         // build view matrix
         Matrix3D vMat = new Matrix3D();
-        vMat.translate(-cameraX, -cameraY, -cameraZ);
+        vMat.translate(-cameraX,-cameraY,-cameraZ);
+
+        // build model matrix
+        Matrix3D mMat = new Matrix3D();
 
         int proj_loc = gl.glGetUniformLocation(rendering_program, "proj_matrix");
-        int mv_loc = gl.glGetUniformLocation(rendering_program, "mv_matrix");
+        int v_loc = gl.glGetUniformLocation(rendering_program, "v_matrix");
+        int m_loc = gl.glGetUniformLocation(rendering_program, "m_matrix");
+        int t_loc = gl.glGetUniformLocation(rendering_program, "t");
+
         gl.glUniformMatrix4fv(proj_loc, 1, false, pMat.getFloatValues(), 0);
+        gl.glUniformMatrix4fv(v_loc, 1, false, vMat.getFloatValues(), 0);
+        gl.glUniformMatrix4fv(m_loc, 1, false, mMat.getFloatValues(), 0);
+        gl.glUniform1f(t_loc, (float)t);
 
         gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
         gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
         gl.glEnableVertexAttribArray(0);
 
-        for (int i = 0; i < 24; i++) {
-            double x = i + t;
-            // build model matrix
-            Matrix3D mMat = new Matrix3D();
+        gl.glEnable(GL_DEPTH_TEST);
+        gl.glDepthFunc(GL_LEQUAL);
 
-//        mMat.translate(cubeLocX, cubeLocY, cubeLocZ);
-            mMat.translate(Math.sin(2 * x) * 6.0, Math.sin(4 * x) * 6.0,
-                    Math.sin(4 * x) * 6.0);
-            mMat.rotate(500 * t, 500 * t, 500 * t);
-            // concatenate model and view matrix to create MV matrix
-            Matrix3D mvMat = new Matrix3D();
-            mvMat.concatenate(vMat);
-            mvMat.concatenate(mMat);
+        //gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-            gl.glUniformMatrix4fv(mv_loc, 1, false, mvMat.getFloatValues(), 0);
-            gl.glEnable(GL_DEPTH_TEST);
-            gl.glDepthFunc(GL_LEQUAL);
-
-            gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-            gl.glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
+        gl.glDrawArraysInstanced(GL_TRIANGLES, 0, 36, 100000);
     }
 
     public void reshape(GLAutoDrawable glAutoDrawable, int i, int i1, int i2, int i3) {
@@ -145,7 +136,7 @@ public class Main extends JFrame implements GLEventListener {
         String fshaderSource[] = readShaderSource("shaders/frag.shader");
 
         int vShader = gl.glCreateShader(GL_VERTEX_SHADER);
-        gl.glShaderSource(vShader, 12, vshaderSource, null, 0); // note: 3 lines of code
+        gl.glShaderSource(vShader, 69, vshaderSource, null, 0); // note: 3 lines of code
         gl.glCompileShader(vShader);
 
         checkOpenGLError();
