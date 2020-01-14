@@ -12,17 +12,25 @@ import com.jogamp.opengl.util.FPSAnimator;
 import graphicslib3D.GLSLUtils;
 import graphicslib3D.Matrix3D;
 import graphicslib3D.MatrixStack;
+import graphicslib3D.Point3D;
+import graphicslib3D.Vector3D;
+import graphicslib3D.Vertex3D;
 
 import javax.swing.*;
 
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.nio.FloatBuffer;
 
 import static com.jogamp.opengl.GL.GL_ARRAY_BUFFER;
+import static com.jogamp.opengl.GL.GL_CULL_FACE;
 import static com.jogamp.opengl.GL.GL_DEPTH_BUFFER_BIT;
 import static com.jogamp.opengl.GL.GL_DEPTH_TEST;
 import static com.jogamp.opengl.GL.GL_FLOAT;
-import static com.jogamp.opengl.GL.GL_FRONT_AND_BACK;
 import static com.jogamp.opengl.GL.GL_LEQUAL;
 import static com.jogamp.opengl.GL.GL_STATIC_DRAW;
 import static com.jogamp.opengl.GL.GL_TRIANGLES;
@@ -32,11 +40,15 @@ import static com.jogamp.opengl.GL2ES2.GL_LINK_STATUS;
 import static com.jogamp.opengl.GL2ES2.GL_VERTEX_SHADER;
 
 import static com.jogamp.opengl.GL2ES3.GL_COLOR;
-import static com.jogamp.opengl.GL2GL3.GL_LINE;
 import static graphicslib3D.GLSLUtils.checkOpenGLError;
 import static graphicslib3D.GLSLUtils.printProgramLog;
 import static graphicslib3D.GLSLUtils.printShaderLog;
 import static graphicslib3D.GLSLUtils.readShaderSource;
+import static java.lang.Math.abs;
+import static java.lang.Math.asin;
+import static java.lang.Math.cos;
+import static java.lang.Math.sin;
+import static java.lang.Math.toRadians;
 
 
 public class Main extends JFrame implements GLEventListener {
@@ -47,9 +59,12 @@ public class Main extends JFrame implements GLEventListener {
     private int vao[] = new int[1];
     private int vbo[ ] = new int[2];
     private float cameraX, cameraY, cameraZ;
+    private float cameraRotX, cameraRotY;
+    private float angleX, angleY;
     private float sunX, sunY, sunZ;
     private float earthX, earthY, earthZ;
     private float moonX, moonY, moonZ;
+    Sphere mySphere = new Sphere(48);
 
     private GLSLUtils util;
     private FPSAnimator animator;
@@ -66,6 +81,66 @@ public class Main extends JFrame implements GLEventListener {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         myCanvas = new GLCanvas(caps);
         myCanvas.addGLEventListener(this);
+
+        myCanvas.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                super.keyPressed(e);
+                if (e.getKeyCode() == KeyEvent.VK_A)
+                    cameraX--;
+                if (e.getKeyCode() == KeyEvent.VK_D)
+                    cameraX++;
+                if (e.getKeyCode() == KeyEvent.VK_W)
+                    cameraZ--;
+                if (e.getKeyCode() == KeyEvent.VK_S)
+                    cameraZ++;
+            }
+        });
+
+        myCanvas.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                super.mouseDragged(e);
+                float sensibility = 0.1f;
+                Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+                int screenXDiv2 = screenSize.width >> 1;
+                int screenYDiv2 = screenSize.height >> 1;
+                int xOnScreen = e.getXOnScreen();
+                int yOnScreen = e.getYOnScreen();
+                int dmx = 0;
+                int dmy = 0;
+
+                if (!SwingUtilities.isMiddleMouseButton(e))
+                    return;
+
+                if (xOnScreen != screenXDiv2 || yOnScreen != screenYDiv2) {
+                    if (xOnScreen != screenXDiv2) {
+                        dmx += xOnScreen - screenXDiv2;
+                    }
+                    if (yOnScreen != screenYDiv2) {
+                        dmy += yOnScreen - screenYDiv2;
+                    }
+                }
+
+                cameraRotX = (angleX + dmx * sensibility) % 360.0f;
+                if (cameraZ < 1)
+                    cameraRotY = -1.0f * (angleY + dmy * sensibility) % 360.0f;
+                else
+                    cameraRotY = (angleY + dmy * sensibility) % 360.0f;
+            }
+        });
+
+        myCanvas.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                super.mouseReleased(e);
+                if (SwingUtilities.isMiddleMouseButton(e)) {
+                    angleX = cameraRotX;
+                    angleY = cameraRotY;
+                }
+            }
+        });
+
         this.add(myCanvas);
         setVisible(true);
 
@@ -83,6 +158,7 @@ public class Main extends JFrame implements GLEventListener {
         rendering_program = createShaderProgram(glAutoDrawable);
         setupVertices();
         cameraX = 0.0f; cameraY = 0.0f; cameraZ = 40.0f;
+        cameraRotX = 0.0f; cameraRotY = 0.0f;
         sunX = 0.0f; sunY = 0.0f; sunZ = 0.0f;
         earthX = 8.0f; earthY = 0.0f; earthZ = 0.0f;
         moonX = 2.0f; moonY = 4.0f; moonZ = 0.0f;
@@ -110,12 +186,15 @@ public class Main extends JFrame implements GLEventListener {
 
         gl.glEnable(GL_DEPTH_TEST);
         gl.glDepthFunc(GL_LEQUAL);
+        gl.glEnable(GL_CULL_FACE);
         //gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
         // build view matrix
         scene.pushMatrix();
-        /*scene.rotate(System.currentTimeMillis() / 10.0 % 10,
-                1.0,0.0,0.0);*/
+        scene.rotate(cameraRotX,
+                0.0,1.0,0.0);
+        scene.rotate(cameraRotY,
+                1.0,0.0,0.0);
         scene.translate(-cameraX, -cameraY, -cameraZ);
 
         // build sun's MV matrix
@@ -137,12 +216,12 @@ public class Main extends JFrame implements GLEventListener {
         gl.glVertexAttribPointer(0, 3, GL_FLOAT,
                 false, 0, 0);
         gl.glEnableVertexAttribArray(0);
-        gl.glDrawArrays(GL_TRIANGLES, 0, 18);
+        gl.glDrawArrays(GL_TRIANGLES, 0, mySphere.getIndices().length);
         // remove sun's rotation
         scene.popMatrix();
         // build earth's mv
         scene.pushMatrix();
-        scene.translate(Math.cos(amt)*10.0f, 0.0f, Math.sin(amt)*10.0f);
+        scene.translate(- cos(amt)*10.0f, 0.0f, sin(amt)*10.0f);
         //scene.translate(earthX, earthY, earthZ);
 
         // earth's rotation
@@ -159,13 +238,14 @@ public class Main extends JFrame implements GLEventListener {
         gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
         gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
         gl.glEnableVertexAttribArray(0);
-        gl.glDrawArrays(GL_TRIANGLES, 0, 36);
+        gl.glDrawArrays(GL_TRIANGLES, 0, mySphere.getIndices().length);
         // remove earth's rotation
         scene.popMatrix();
 
         // build moon's mv
         scene.pushMatrix();
-        scene.translate(0.0f, Math.sin(amt)*2.0f, Math.cos(amt)*2.0f);
+        scene.translate(sin(amt) * 1.5f, sin(amt) * 0.8f,
+                cos(amt) * 1.5f);
         //scene.translate(moonX, moonY, moonZ);
         scene.rotate(System.currentTimeMillis() / 10.0,
                 1.0,1.0,1.0);
@@ -180,7 +260,7 @@ public class Main extends JFrame implements GLEventListener {
         gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
         gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
         gl.glEnableVertexAttribArray(0);
-        gl.glDrawArrays(GL_TRIANGLES, 0, 36);
+        gl.glDrawArrays(GL_TRIANGLES, 0, mySphere.getIndices().length);
 
         // remove moon's mv
         scene.popMatrix();
@@ -247,7 +327,7 @@ public class Main extends JFrame implements GLEventListener {
     }
 
     private Matrix3D perspective(float fovy, float aspect, float n, float f) {
-        float q = 1.0f / ((float) Math.tan(Math.toRadians(0.5f * fovy)));
+        float q = 1.0f / ((float) Math.tan(toRadians(0.5f * fovy)));
         float A = q / aspect;
         float B = (n + f) / (n - f);
         float C = (2.0f * n * f) / (n - f);
@@ -263,6 +343,9 @@ public class Main extends JFrame implements GLEventListener {
 
     private void setupVertices() {
         GL4 gl = (GL4) GLContext.getCurrentGL();
+        Vertex3D[ ] vertices = mySphere.getVertices();
+        int[ ] indices = mySphere.getIndices();
+        float[ ] pvalues = new float[indices.length*3];
 
         float[] pyramid_positions =
                 {
@@ -289,18 +372,90 @@ public class Main extends JFrame implements GLEventListener {
                         1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f
                 };
 
+        for (int i=0; i<indices.length; i++)
+        {
+            pvalues[i*3] = (float) (vertices[indices[i]]).getX();
+            pvalues[i*3+1] = (float) (vertices[indices[i]]).getY();
+            pvalues[i*3+2] = (float) (vertices[indices[i]]).getZ();
+        }
+
         gl.glGenVertexArrays(vao.length, vao, 0);
         gl.glBindVertexArray(vao[0]);
         gl.glGenBuffers(vbo.length, vbo, 0);
 
         gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-        FloatBuffer pyramidBuf = Buffers.newDirectFloatBuffer(pyramid_positions);
+        FloatBuffer pyramidBuf = Buffers.newDirectFloatBuffer(pvalues);
         gl.glBufferData(GL_ARRAY_BUFFER, pyramidBuf.limit()*4, pyramidBuf,
                 GL_STATIC_DRAW);
 
         gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-        FloatBuffer cubeBuf = Buffers.newDirectFloatBuffer(cube_positions);
+        FloatBuffer cubeBuf = Buffers.newDirectFloatBuffer(pvalues);
         gl.glBufferData(GL_ARRAY_BUFFER, cubeBuf.limit()*4, cubeBuf,
                 GL_STATIC_DRAW);
+    }
+
+    public class Sphere
+    {
+        private int numVertices, numIndices, prec; // prec = precision
+        private int[ ] indices;
+        private Vertex3D[ ] vertices;
+        public Sphere(int p)
+        { prec = p;
+            initSphere();
+        }
+        private void initSphere()
+        { numVertices = (prec+1) * (prec+1);
+            numIndices = prec * prec * 6;
+            vertices = new Vertex3D[numVertices];
+            indices = new int[numIndices];
+            for (int i=0; i<numVertices; i++)
+            { vertices[i] = new Vertex3D();
+            }
+// calculate triangle vertices
+            for (int i=0; i<=prec; i++)
+            { for (int j=0; j<=prec; j++)
+            { float y = (float) cos(toRadians(180-i*180/prec));
+                float x = -(float) cos(toRadians(j*360/prec)) * (float)
+                        abs(cos(asin(y)));
+                float z = (float) sin(toRadians(j*360/prec)) * (float)
+                        abs(cos(asin(y)));
+                vertices[i*(prec+1)+j].setLocation(new Point3D(x,y,z));
+                vertices[i*(prec+1)+j].setS((float)j/prec); // texture coordinates
+                vertices[i*(prec+1)+j].setT((float)i/prec);
+                vertices[i*(prec+1)+j].setNormal(new Vector3D(vertices[i*
+                        (prec+1)+j].getLocation()));
+            } }
+// calculate triangle indices
+            for(int i=0; i<prec; i++)
+            { for(int j=0; j<prec; j++)
+            { indices[6*(i*prec+j)+0] = i*(prec+1)+j;
+                indices[6*(i*prec+j)+1] = i*(prec+1)+j+1;
+                indices[6*(i*prec+j)+2] = (i+1)*(prec+1)+j;
+                indices[6*(i*prec+j)+3] = i*(prec+1)+j+1;
+                indices[6*(i*prec+j)+4] = (i+1)*(prec+1)+j+1;
+                indices[6*(i*prec+j)+5] = (i+1)*(prec+1)+j;
+            } } }
+        public int[ ] getIndices() { return indices; }
+        public Vertex3D[ ] getVertices() { return vertices; }
+    }
+
+    private static class Arrowhead {
+        private static Arrowhead instance;
+        private Arrowhead() {
+            float[] vertices = {
+                    0.0f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f,
+                    0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -0.5f, 0.0f, 0.0f,
+                    0.0f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f,
+                    -0.5f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.5f, 0.0f, 0.0f,
+            };
+
+
+        }
+        private static Arrowhead getInstance() {
+            if (instance != null) {
+                return instance;
+            }
+            return instance = new Arrowhead();
+        }
     }
 }
