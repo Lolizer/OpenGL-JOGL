@@ -18,7 +18,6 @@ import graphicslib3D.Vertex3D;
 
 import javax.swing.*;
 
-import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -58,15 +57,15 @@ public class Main extends JFrame implements GLEventListener {
     private int rendering_program;
     private int vao[] = new int[1];
     private int vbo[ ] = new int[2];
-    float lastX = getWidth() / 2, lastY = getHeight() / 2;
-    float pitch, yaw = -90.0f;
-    private float cameraX, cameraY, cameraZ;
-    private float targetX, targetY, targetZ;
-    private float cameraRotX, cameraRotY;
+    private float lastX, lastY;
+    private float pitch, yaw;
+    private Vector3D up;
+    private Vector3D cameraPos;
+    private Vector3D direction;
     private float sunX, sunY, sunZ;
     private float earthX, earthY, earthZ;
     private float moonX, moonY, moonZ;
-    Sphere mySphere = new Sphere(48);
+    private Sphere mySphere = new Sphere(48);
 
     private GLSLUtils util;
     private FPSAnimator animator;
@@ -88,14 +87,17 @@ public class Main extends JFrame implements GLEventListener {
             @Override
             public void keyPressed(KeyEvent e) {
                 super.keyPressed(e);
-                if (e.getKeyCode() == KeyEvent.VK_A)
-                    cameraX -= .5f;
-                if (e.getKeyCode() == KeyEvent.VK_D)
-                    cameraX += .5f;
+                float camSpeed = 1.5f;
+                Vector3D directionOffset = direction.mult(camSpeed);
+                Vector3D sidewaysOffset = direction.cross(up).normalize().mult(camSpeed * 0.75);
                 if (e.getKeyCode() == KeyEvent.VK_W)
-                    cameraZ -= .5f;;
+                    cameraPos = cameraPos.add(directionOffset);
                 if (e.getKeyCode() == KeyEvent.VK_S)
-                    cameraZ += .5f;;
+                    cameraPos = cameraPos.minus(directionOffset);
+                if (e.getKeyCode() == KeyEvent.VK_A)
+                    cameraPos = cameraPos.minus(sidewaysOffset);
+                if (e.getKeyCode() == KeyEvent.VK_D)
+                    cameraPos = cameraPos.add(sidewaysOffset);
             }
         });
 
@@ -103,12 +105,19 @@ public class Main extends JFrame implements GLEventListener {
             @Override
             public void mouseDragged(MouseEvent e) {
                 super.mouseDragged(e);
-                float sensibility = 0.4f;
-                Dimension windowSize = getSize();
+
                 int xOnScreen = e.getX();
                 int yOnScreen = e.getY();
+
+                if (Math.abs(lastX - getWidth() / 2) < 0.01 && Math.abs(lastY - getHeight() / 2) < 0.01) {
+                    lastX = xOnScreen;
+                    lastY = yOnScreen;
+                }
+
+                float sensibility = 0.2f;
                 float xoffset = xOnScreen - lastX;
                 float yoffset = lastY - yOnScreen;
+
                 lastX = xOnScreen;
                 lastY = yOnScreen;
 
@@ -126,15 +135,12 @@ public class Main extends JFrame implements GLEventListener {
                 if(pitch < -89.0f)
                     pitch = -89.0f;
 
-                Vector3D direction = new Vector3D(
-                (float) (Math.cos(Math.toRadians(yaw)) * Math.cos(Math.toRadians(pitch))),
-                (float) (Math.sin(Math.toRadians(pitch))),
-                (float) (Math.sin(Math.toRadians(yaw)) * Math.cos(Math.toRadians(pitch)))
-                );
+                System.out.println("pitch: " + pitch + " yaw: " + yaw);
+
+                direction.setX(Math.cos(Math.toRadians(yaw)) * Math.cos(Math.toRadians(pitch)));
+                direction.setY(Math.sin(Math.toRadians(pitch)));
+                direction.setZ(Math.sin(Math.toRadians(yaw)) * Math.cos(Math.toRadians(pitch)));
                 direction.normalize();
-                targetX = (float) direction.getX();
-                targetY = (float) direction.getY();
-                targetZ = (float) direction.getZ();
             }
         });
 
@@ -143,7 +149,8 @@ public class Main extends JFrame implements GLEventListener {
             public void mouseReleased(MouseEvent e) {
                 super.mouseReleased(e);
                 if (SwingUtilities.isMiddleMouseButton(e)) {
-
+                    lastX = getWidth() / 2;
+                    lastY = getHeight() /2;
                 }
             }
         });
@@ -164,9 +171,11 @@ public class Main extends JFrame implements GLEventListener {
         util = new GLSLUtils();
         rendering_program = createShaderProgram(glAutoDrawable);
         setupVertices();
-        cameraX = 0.0f; cameraY = 0.0f; cameraZ = 40.0f;
-        targetX = 0; targetY = 0; targetZ = -1;
-        cameraRotX = 0.0f; cameraRotY = -90.0f;
+        cameraPos = new Vector3D(.0, .0, 30.0);
+        direction = new Vector3D(.0, .0, -1.0);
+        up = new Vector3D(.0, 1.0, .0);
+        lastX = getWidth() / 2; lastY = getHeight() / 2;
+        yaw = -90.0f;
         sunX = 0.0f; sunY = 0.0f; sunZ = 0.0f;
         earthX = 8.0f; earthY = 0.0f; earthZ = 0.0f;
         moonX = 2.0f; moonY = 4.0f; moonZ = 0.0f;
@@ -199,16 +208,8 @@ public class Main extends JFrame implements GLEventListener {
 
         // build view matrix
         scene.pushMatrix();
-        scene.multMatrix(lookAt(new Point3D(cameraX, cameraY, cameraZ),
-                new Point3D(cameraX + targetX, cameraY + targetY,
-                        cameraZ + targetZ),
-                new Vector3D(0.0f, 1.0f, 0.0f)));
-        /*scene.pushMatrix();
-        scene.rotate(cameraRotX,
-                0.0,1.0,0.0);
-        scene.rotate(cameraRotY,
-                1.0,0.0,0.0);
-        scene.translate(-cameraX, -cameraY, -cameraZ);*/
+        scene.multMatrix(lookAt(cameraPos, cameraPos.add(direction),
+                up));
 
         // build sun's MV matrix
         scene.pushMatrix();
@@ -407,10 +408,8 @@ public class Main extends JFrame implements GLEventListener {
                 GL_STATIC_DRAW);
     }
 
-    private Matrix3D lookAt(Point3D eye, Point3D target, Vector3D y) {
-        Vector3D eyeV = new Vector3D(eye);
-        Vector3D targetV = new Vector3D(target);
-        Vector3D fwd = (targetV.minus(eyeV)).normalize();
+    private Matrix3D lookAt(Vector3D eye, Vector3D target, Vector3D y) {
+        Vector3D fwd = (target.minus(eye)).normalize();
         Vector3D side = (fwd.cross(y)).normalize();
         Vector3D up = (side.cross(fwd)).normalize();
 
@@ -427,9 +426,9 @@ public class Main extends JFrame implements GLEventListener {
         look.setElementAt(1,2, up.getZ());
         look.setElementAt(2,2, -fwd.getZ());
         look.setElementAt(3,2, 0.0f);
-        look.setElementAt(0,3, side.dot(eyeV.mult(-1)));
-        look.setElementAt(1,3, up.dot(eyeV.mult(-1)));
-        look.setElementAt(2,3, (fwd.mult(-1)).dot(eyeV.mult(-1)));
+        look.setElementAt(0,3, side.dot(eye.mult(-1)));
+        look.setElementAt(1,3, up.dot(eye.mult(-1)));
+        look.setElementAt(2,3, (fwd.mult(-1)).dot(eye.mult(-1)));
         look.setElementAt(3,3, 1.0f);
         return look;
     }
@@ -444,7 +443,8 @@ public class Main extends JFrame implements GLEventListener {
             initSphere();
         }
         private void initSphere()
-        { numVertices = (prec+1) * (prec+1);
+        {
+            numVertices = (prec+1) * (prec+1);
             numIndices = prec * prec * 6;
             vertices = new Vertex3D[numVertices];
             indices = new int[numIndices];
@@ -496,6 +496,15 @@ public class Main extends JFrame implements GLEventListener {
                 return instance;
             }
             return instance = new Arrowhead();
+        }
+
+        public static boolean dispose() {
+            if (instance != null) {
+                instance = null;
+                return true;
+            }
+
+            return false;
         }
     }
 }
