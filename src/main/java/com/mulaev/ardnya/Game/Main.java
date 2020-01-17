@@ -9,6 +9,8 @@ import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.FPSAnimator;
+import com.jogamp.opengl.util.texture.Texture;
+import com.jogamp.opengl.util.texture.TextureIO;
 import graphicslib3D.GLSLUtils;
 import graphicslib3D.Matrix3D;
 import graphicslib3D.MatrixStack;
@@ -23,19 +25,17 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.io.File;
 import java.nio.FloatBuffer;
 
 import static com.jogamp.opengl.GL.GL_ARRAY_BUFFER;
-import static com.jogamp.opengl.GL.GL_BACK;
 import static com.jogamp.opengl.GL.GL_CULL_FACE;
 import static com.jogamp.opengl.GL.GL_DEPTH_BUFFER_BIT;
 import static com.jogamp.opengl.GL.GL_DEPTH_TEST;
 import static com.jogamp.opengl.GL.GL_FLOAT;
-import static com.jogamp.opengl.GL.GL_FRONT_AND_BACK;
 import static com.jogamp.opengl.GL.GL_LEQUAL;
 import static com.jogamp.opengl.GL.GL_STATIC_DRAW;
 import static com.jogamp.opengl.GL.GL_TRIANGLES;
-import static com.jogamp.opengl.GL.GL_VIEWPORT;
 import static com.jogamp.opengl.GL2ES2.GL_COMPILE_STATUS;
 import static com.jogamp.opengl.GL2ES2.GL_FRAGMENT_SHADER;
 import static com.jogamp.opengl.GL2ES2.GL_LINK_STATUS;
@@ -430,49 +430,10 @@ public class Main extends JFrame implements GLEventListener {
         return look;
     }
 
-    public class Sphere
-    {
-        private int numVertices, numIndices, prec; // prec = precision
-        private int[ ] indices;
-        private Vertex3D[ ] vertices;
-        public Sphere(int p)
-        { prec = p;
-            initSphere();
-        }
-        private void initSphere()
-        {
-            numVertices = (prec+1) * (prec+1);
-            numIndices = prec * prec * 6;
-            vertices = new Vertex3D[numVertices];
-            indices = new int[numIndices];
-            for (int i=0; i<numVertices; i++)
-            { vertices[i] = new Vertex3D();
-            }
-// calculate triangle vertices
-            for (int i=0; i<=prec; i++)
-            { for (int j=0; j<=prec; j++)
-            { float y = (float) cos(toRadians(180-i*180/prec));
-                float x = -(float) cos(toRadians(j*360/prec)) * (float)
-                        abs(cos(asin(y)));
-                float z = (float) sin(toRadians(j*360/prec)) * (float)
-                        abs(cos(asin(y)));
-                vertices[i*(prec+1)+j].setLocation(new Point3D(x,y,z));
-                vertices[i*(prec+1)+j].setS((float)j/prec); // texture coordinates
-                vertices[i*(prec+1)+j].setT((float)i/prec);
-                vertices[i*(prec+1)+j].setNormal(new Vector3D(vertices[i*
-                        (prec+1)+j].getLocation()));
-            } }
-// calculate triangle indices
-            for(int i=0; i<prec; i++)
-            { for(int j=0; j<prec; j++)
-            { indices[6*(i*prec+j)+0] = i*(prec+1)+j;
-                indices[6*(i*prec+j)+1] = i*(prec+1)+j+1;
-                indices[6*(i*prec+j)+2] = (i+1)*(prec+1)+j;
-                indices[6*(i*prec+j)+3] = i*(prec+1)+j+1;
-                indices[6*(i*prec+j)+4] = (i+1)*(prec+1)+j+1;
-                indices[6*(i*prec+j)+5] = (i+1)*(prec+1)+j;
-            } } }
-        public int[ ] getIndices() { return indices; }
-        public Vertex3D[ ] getVertices() { return vertices; }
+    public Texture loadTexture(String textureFileName) {
+        Texture tex = null;
+        try { tex = TextureIO.newTexture(new File(textureFileName), false); }
+        catch (Exception e) { e.printStackTrace(); }
+        return tex;
     }
 }
