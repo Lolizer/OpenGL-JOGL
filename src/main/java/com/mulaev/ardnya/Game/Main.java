@@ -26,13 +26,16 @@ import java.awt.event.MouseMotionAdapter;
 import java.nio.FloatBuffer;
 
 import static com.jogamp.opengl.GL.GL_ARRAY_BUFFER;
+import static com.jogamp.opengl.GL.GL_BACK;
 import static com.jogamp.opengl.GL.GL_CULL_FACE;
 import static com.jogamp.opengl.GL.GL_DEPTH_BUFFER_BIT;
 import static com.jogamp.opengl.GL.GL_DEPTH_TEST;
 import static com.jogamp.opengl.GL.GL_FLOAT;
+import static com.jogamp.opengl.GL.GL_FRONT_AND_BACK;
 import static com.jogamp.opengl.GL.GL_LEQUAL;
 import static com.jogamp.opengl.GL.GL_STATIC_DRAW;
 import static com.jogamp.opengl.GL.GL_TRIANGLES;
+import static com.jogamp.opengl.GL.GL_VIEWPORT;
 import static com.jogamp.opengl.GL2ES2.GL_COMPILE_STATUS;
 import static com.jogamp.opengl.GL2ES2.GL_FRAGMENT_SHADER;
 import static com.jogamp.opengl.GL2ES2.GL_LINK_STATUS;
@@ -56,7 +59,7 @@ public class Main extends JFrame implements GLEventListener {
     private MatrixStack scene;
     private int rendering_program;
     private int vao[] = new int[1];
-    private int vbo[ ] = new int[2];
+    private int vbo[ ] = new int[3];
     private float lastX, lastY;
     private float pitch, yaw;
     private Vector3D up;
@@ -135,8 +138,6 @@ public class Main extends JFrame implements GLEventListener {
                 if(pitch < -89.0f)
                     pitch = -89.0f;
 
-                System.out.println("pitch: " + pitch + " yaw: " + yaw);
-
                 direction.setX(Math.cos(Math.toRadians(yaw)) * Math.cos(Math.toRadians(pitch)));
                 direction.setY(Math.sin(Math.toRadians(pitch)));
                 direction.setZ(Math.sin(Math.toRadians(yaw)) * Math.cos(Math.toRadians(pitch)));
@@ -192,11 +193,10 @@ public class Main extends JFrame implements GLEventListener {
         GL4 gl = (GL4) GLContext.getCurrentGL();
         int proj_loc = gl.glGetUniformLocation(rendering_program, "proj_matrix");
         int mv_loc = gl.glGetUniformLocation(rendering_program, "mv_matrix");
-        double amt = (double)(System.currentTimeMillis())/1000.0;
+        double amt = (double)(System.currentTimeMillis()) / 1000.0;
         gl.glClear(GL_DEPTH_BUFFER_BIT);
 
-        float bkg[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-        FloatBuffer bkgBuffer = Buffers.newDirectFloatBuffer(bkg);
+        FloatBuffer bkgBuffer = Buffers.newDirectFloatBuffer(new float[] { 0.0f, 0.0f, 0.0f, 1.0f });
         gl.glClearBufferfv(GL_COLOR, 0, bkgBuffer);
 
         gl.glUseProgram(rendering_program);
@@ -206,10 +206,12 @@ public class Main extends JFrame implements GLEventListener {
         gl.glEnable(GL_CULL_FACE);
         //gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+        // pendulum sama
+        Arrowhead.draw(this, gl, vbo, vao, pMat, proj_loc, mv_loc, pitch, yaw);
+
         // build view matrix
         scene.pushMatrix();
-        scene.multMatrix(lookAt(cameraPos, cameraPos.add(direction),
-                up));
+        scene.multMatrix(lookAt(cameraPos, cameraPos.add(direction), up));
 
         // build sun's MV matrix
         scene.pushMatrix();
@@ -217,8 +219,7 @@ public class Main extends JFrame implements GLEventListener {
 
         // add additional matrix for sun's rotation
         scene.pushMatrix();
-        scene.rotate(System.currentTimeMillis() / 10.0,
-                1.0,1.0,1.0);
+        scene.rotate(amt * 100.0,1.0,1.0,1.0);
         scene.scale(1.25, 1.25, 1.25);
 
         gl.glUniformMatrix4fv(proj_loc, 1, false,
@@ -244,8 +245,6 @@ public class Main extends JFrame implements GLEventListener {
                 1.0,1.0,1.0);
         scene.scale(0.75, 0.75, 0.75);
 
-        gl.glUniformMatrix4fv(proj_loc, 1,
-                false, pMat.getFloatValues(), 0);
         gl.glUniformMatrix4fv(mv_loc, 1,
                 false, scene.peek().getFloatValues(), 0);
 
@@ -261,13 +260,11 @@ public class Main extends JFrame implements GLEventListener {
         scene.translate(sin(amt) * 1.5f, sin(amt) * 0.8f,
                 cos(amt) * 1.5f);
         //scene.translate(moonX, moonY, moonZ);
-        scene.rotate(System.currentTimeMillis() / 10.0,
+        scene.rotate(amt * 10.0,
                 1.0,1.0,1.0);
 
         scene.scale(0.25, 0.25, 0.25);
 
-        gl.glUniformMatrix4fv(proj_loc, 1,
-                false, pMat.getFloatValues(), 0);
         gl.glUniformMatrix4fv(mv_loc, 1,
                 false, scene.peek().getFloatValues(), 0);
 
@@ -477,34 +474,5 @@ public class Main extends JFrame implements GLEventListener {
             } } }
         public int[ ] getIndices() { return indices; }
         public Vertex3D[ ] getVertices() { return vertices; }
-    }
-
-    private static class Arrowhead {
-        private static Arrowhead instance;
-        private Arrowhead() {
-            float[] vertices = {
-                    0.0f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f,
-                    0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -0.5f, 0.0f, 0.0f,
-                    0.0f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f,
-                    -0.5f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.5f, 0.0f, 0.0f,
-            };
-
-
-        }
-        private static Arrowhead getInstance() {
-            if (instance != null) {
-                return instance;
-            }
-            return instance = new Arrowhead();
-        }
-
-        public static boolean dispose() {
-            if (instance != null) {
-                instance = null;
-                return true;
-            }
-
-            return false;
-        }
     }
 }
