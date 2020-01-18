@@ -14,7 +14,6 @@ import com.jogamp.opengl.util.texture.TextureIO;
 import graphicslib3D.GLSLUtils;
 import graphicslib3D.Matrix3D;
 import graphicslib3D.MatrixStack;
-import graphicslib3D.Point3D;
 import graphicslib3D.Vector3D;
 import graphicslib3D.Vertex3D;
 
@@ -46,8 +45,6 @@ import static graphicslib3D.GLSLUtils.checkOpenGLError;
 import static graphicslib3D.GLSLUtils.printProgramLog;
 import static graphicslib3D.GLSLUtils.printShaderLog;
 import static graphicslib3D.GLSLUtils.readShaderSource;
-import static java.lang.Math.abs;
-import static java.lang.Math.asin;
 import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.toRadians;
@@ -68,7 +65,7 @@ public class Main extends JFrame implements GLEventListener {
     private float sunX, sunY, sunZ;
     private float earthX, earthY, earthZ;
     private float moonX, moonY, moonZ;
-    private Sphere mySphere = new Sphere(48);
+    private Sphere mySphere;
 
     private GLSLUtils util;
     private FPSAnimator animator;
@@ -172,6 +169,7 @@ public class Main extends JFrame implements GLEventListener {
         util = new GLSLUtils();
         rendering_program = createShaderProgram(glAutoDrawable);
         setupVertices();
+        mySphere = new Sphere(gl, 64);
         cameraPos = new Vector3D(.0, .0, 30.0);
         direction = new Vector3D(.0, .0, -1.0);
         up = new Vector3D(.0, 1.0, .0);
@@ -207,7 +205,7 @@ public class Main extends JFrame implements GLEventListener {
         //gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
         // pendulum sama
-        Arrowhead.draw(this, gl, vbo, vao, pMat, proj_loc, mv_loc, pitch, yaw);
+        Arrowhead.draw(this, gl, vao, pMat, proj_loc, mv_loc, pitch, yaw);
 
         // build view matrix
         scene.pushMatrix();
@@ -227,11 +225,7 @@ public class Main extends JFrame implements GLEventListener {
         gl.glUniformMatrix4fv(mv_loc, 1, false,
                 scene.peek().getFloatValues(), 0);
 
-        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-        gl.glVertexAttribPointer(0, 3, GL_FLOAT,
-                false, 0, 0);
-        gl.glEnableVertexAttribArray(0);
-        gl.glDrawArrays(GL_TRIANGLES, 0, mySphere.getIndices().length);
+        mySphere.draw();
         // remove sun's rotation
         scene.popMatrix();
         // build earth's mv
@@ -248,10 +242,7 @@ public class Main extends JFrame implements GLEventListener {
         gl.glUniformMatrix4fv(mv_loc, 1,
                 false, scene.peek().getFloatValues(), 0);
 
-        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-        gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
-        gl.glEnableVertexAttribArray(0);
-        gl.glDrawArrays(GL_TRIANGLES, 0, mySphere.getIndices().length);
+        mySphere.draw();
         // remove earth's rotation
         scene.popMatrix();
 
@@ -268,10 +259,7 @@ public class Main extends JFrame implements GLEventListener {
         gl.glUniformMatrix4fv(mv_loc, 1,
                 false, scene.peek().getFloatValues(), 0);
 
-        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-        gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
-        gl.glEnableVertexAttribArray(0);
-        gl.glDrawArrays(GL_TRIANGLES, 0, mySphere.getIndices().length);
+        mySphere.draw();
 
         // remove moon's mv
         scene.popMatrix();
@@ -354,9 +342,6 @@ public class Main extends JFrame implements GLEventListener {
 
     private void setupVertices() {
         GL4 gl = (GL4) GLContext.getCurrentGL();
-        Vertex3D[ ] vertices = mySphere.getVertices();
-        int[ ] indices = mySphere.getIndices();
-        float[ ] pvalues = new float[indices.length*3];
 
         float[] pyramid_positions =
                 {
@@ -383,26 +368,9 @@ public class Main extends JFrame implements GLEventListener {
                         1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f
                 };
 
-        for (int i=0; i<indices.length; i++)
-        {
-            pvalues[i*3] = (float) (vertices[indices[i]]).getX();
-            pvalues[i*3+1] = (float) (vertices[indices[i]]).getY();
-            pvalues[i*3+2] = (float) (vertices[indices[i]]).getZ();
-        }
-
+        // global vao
         gl.glGenVertexArrays(vao.length, vao, 0);
-        gl.glBindVertexArray(vao[0]);
-        gl.glGenBuffers(vbo.length, vbo, 0);
-
-        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-        FloatBuffer pyramidBuf = Buffers.newDirectFloatBuffer(pvalues);
-        gl.glBufferData(GL_ARRAY_BUFFER, pyramidBuf.limit()*4, pyramidBuf,
-                GL_STATIC_DRAW);
-
-        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-        FloatBuffer cubeBuf = Buffers.newDirectFloatBuffer(pvalues);
-        gl.glBufferData(GL_ARRAY_BUFFER, cubeBuf.limit()*4, cubeBuf,
-                GL_STATIC_DRAW);
+        gl.glBindVertexArray(0);
     }
 
     private Matrix3D lookAt(Vector3D eye, Vector3D target, Vector3D y) {
