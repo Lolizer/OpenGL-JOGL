@@ -10,7 +10,13 @@ import java.nio.FloatBuffer;
 
 import static com.jogamp.opengl.GL.GL_ARRAY_BUFFER;
 import static com.jogamp.opengl.GL.GL_FLOAT;
+import static com.jogamp.opengl.GL.GL_LINEAR_MIPMAP_LINEAR;
+import static com.jogamp.opengl.GL.GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT;
 import static com.jogamp.opengl.GL.GL_STATIC_DRAW;
+import static com.jogamp.opengl.GL.GL_TEXTURE0;
+import static com.jogamp.opengl.GL.GL_TEXTURE_2D;
+import static com.jogamp.opengl.GL.GL_TEXTURE_MAX_ANISOTROPY_EXT;
+import static com.jogamp.opengl.GL.GL_TEXTURE_MIN_FILTER;
 import static com.jogamp.opengl.GL.GL_TRIANGLES;
 import static java.lang.Math.abs;
 import static java.lang.Math.asin;
@@ -24,10 +30,12 @@ public class Sphere {
     private int[] indices;
     private int[] vbo;
     private Vertex3D[] vertices;
+    private int tex;
 
     public Sphere(GL4 gl, int p) {
         prec = p;
         vbo = new int[3];
+        tex = MyUtil.loadTexture("dstar.png").getTextureObject();
         this.gl = gl;
         initSphere();
     }
@@ -123,8 +131,26 @@ public class Sphere {
         gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
         gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
         gl.glEnableVertexAttribArray(0);
+
+        // activate buffer #1, which contains the texture coordinates
+        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+        gl.glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
+        gl.glEnableVertexAttribArray(1);
+
+        // activate texture unit #0 and bind it to the texture object
+        gl.glActiveTexture(GL_TEXTURE0);
+        gl.glBindTexture(GL_TEXTURE_2D, tex);
+        gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                GL_LINEAR_MIPMAP_LINEAR);
+        gl.glGenerateMipmap(GL_TEXTURE_2D);
+
+        if (gl.isExtensionAvailable("GL_EXT_texture_filter_anisotropic"))
+        {
+            float max[ ] = new float[1];
+            gl.glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, max, 0);
+            gl.glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, max[0]);
+        }
+
         gl.glDrawArrays(GL_TRIANGLES, 0, getIndices().length);
-
-
     }
 }

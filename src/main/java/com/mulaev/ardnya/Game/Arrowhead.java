@@ -2,6 +2,7 @@ package com.mulaev.ardnya.Game;
 
 import com.jogamp.common.nio.Buffers;
 import com.jogamp.opengl.GL4;
+import com.jogamp.opengl.GLContext;
 import graphicslib3D.Matrix3D;
 
 import javax.swing.*;
@@ -9,56 +10,95 @@ import java.nio.FloatBuffer;
 
 import static com.jogamp.opengl.GL.GL_ARRAY_BUFFER;
 import static com.jogamp.opengl.GL.GL_CULL_FACE;
+import static com.jogamp.opengl.GL.GL_DEPTH_BUFFER_BIT;
 import static com.jogamp.opengl.GL.GL_FLOAT;
+import static com.jogamp.opengl.GL.GL_FRONT_AND_BACK;
 import static com.jogamp.opengl.GL.GL_LINE_STRIP;
 import static com.jogamp.opengl.GL.GL_STATIC_DRAW;
+import static com.jogamp.opengl.GL.GL_TEXTURE0;
+import static com.jogamp.opengl.GL.GL_TEXTURE_2D;
 import static com.jogamp.opengl.GL.GL_TRIANGLES;
 import static com.jogamp.opengl.GL.GL_VIEWPORT;
+import static com.jogamp.opengl.GL2GL3.GL_FILL;
+import static com.jogamp.opengl.GL2GL3.GL_LINE;
 
 class Arrowhead {
     private static Arrowhead instance;
-    private static int[] vbo = new int[2];
+    private static GL4 gl;
+    private static int[] vao = new int[1];
+    private static int[] vbo = new int[3];
     private static Matrix3D ortho;
+    private static int rendering_program;
+    private static int tex;
+    private static int proj_loc;
+    private static int mv_loc;
 
-    private Arrowhead(GL4 gl, int[] vao) {
-        float[] vertices = {
+    private Arrowhead() {
+        gl = (GL4) GLContext.getCurrentGL();
+
+        float[] arrowVertices = {
                 0.0f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f,
                 0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -0.5f, 0.0f, 0.0f,
                 0.0f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f,
                 -0.5f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.5f, 0.0f, 0.0f,
         };
 
-        float[] borders = {
+        float[] borderVertices = {
                 -1.0f, 1.0f, 2.0f, 1.0f, 1.0f, 2.0f,
                 1.0f, -1.0f, 2.0f, -1.0f, -1.0f, 2.0f,
                 -1.0f, 1.0f, 2.0f
         };
 
+        float[] textures = new float[arrowVertices.length / 3];
+
+        for (int i = 0; i < textures.length; i++) {
+            textures[i] = textures[i] * System.currentTimeMillis() / 1000;
+        }
+
         ortho = orthoProjection();
+        String vertex = "shaders/arrowhead_vert.shader";
+        String fragment = "shaders/arrowhead_frag.shader";
+        rendering_program = MyUtil.createShaderProgram(vertex,
+                fragment, this.getClass().getSimpleName());
 
-        gl.glGenBuffers(this.vbo.length, vbo, 0);
+        tex = MyUtil.loadTexture("arrowhead.jpg").getTextureObject();
 
+        proj_loc = gl.glGetUniformLocation(rendering_program, "proj_matrix");
+        mv_loc = gl.glGetUniformLocation(rendering_program, "mv_matrix");
+
+        gl.glGenVertexArrays(vao.length, vao, 0);
         gl.glBindVertexArray(vao[0]);
+
+        gl.glGenBuffers(vbo.length, vbo, 0);
+
+        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+        FloatBuffer borderBuff = Buffers.newDirectFloatBuffer(borderVertices);
+        gl.glBufferData(GL_ARRAY_BUFFER, borderBuff.limit() * 4, borderBuff,
+                GL_STATIC_DRAW);
+
         gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-        FloatBuffer arrowheadBuff = Buffers.newDirectFloatBuffer(vertices);
+        FloatBuffer arrowheadBuff = Buffers.newDirectFloatBuffer(arrowVertices);
         gl.glBufferData(GL_ARRAY_BUFFER, arrowheadBuff.limit() * 4, arrowheadBuff,
                 GL_STATIC_DRAW);
 
-        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-        FloatBuffer borderBuff = Buffers.newDirectFloatBuffer(borders);
-        gl.glBufferData(GL_ARRAY_BUFFER, borderBuff.limit() * 4, borderBuff,
+        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+        FloatBuffer arrowheadTex = Buffers.newDirectFloatBuffer(textures);
+        gl.glBufferData(GL_ARRAY_BUFFER, arrowheadTex.limit() * 4, arrowheadTex,
                 GL_STATIC_DRAW);
+
+        gl.glBindVertexArray(0);
     }
-    private static Arrowhead getInstance(GL4 gl, int[] vao) {
+    private static Arrowhead getInstance() {
         if (instance != null) {
             return instance;
         }
-        return instance = new Arrowhead(gl, vao);
+        return instance = new Arrowhead();
     }
 
-    public static boolean dispose(GL4 gl) {
+    public static boolean dispose() {
         if (instance != null) {
             instance = null;
+            gl.glDeleteVertexArrays(vao.length, vao, 0);
             gl.glDeleteBuffers(vbo.length, vbo,0);
             return true;
         }
@@ -66,17 +106,19 @@ class Arrowhead {
         return false;
     }
 
-    public static void draw(JFrame frame, GL4 gl, int[] vao,
-            Matrix3D pMat, int proj_loc, int mv_loc, float pitch, float yaw) {
+    public static void draw(JFrame frame,
+            Matrix3D pMat, float pitch, float yaw) {
 
         if (instance == null)
-            getInstance(gl, vao);
+            getInstance();
 
         int[] viewProp = new int[4];
         int width = 150, height = 100;
         Matrix3D vMat = new Matrix3D();
         Matrix3D mMat = new Matrix3D();
         Matrix3D scene = new Matrix3D();
+
+        gl.glUseProgram(rendering_program);
 
         // настройка матриц вида и модели
         vMat.translate(0, 0, -30);
@@ -87,6 +129,7 @@ class Arrowhead {
         scene.concatenate(mMat);
 
         gl.glDisable(GL_CULL_FACE);
+        gl.glClear(GL_DEPTH_BUFFER_BIT);
 
         // сохранение свойств viewport'a
         gl.glGetIntegerv(GL_VIEWPORT, viewProp, 0);
@@ -113,7 +156,20 @@ class Arrowhead {
         gl.glVertexAttribPointer(0, 3, GL_FLOAT,
                 false, 0, 0);
         gl.glEnableVertexAttribArray(0);
+
+        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+        gl.glVertexAttribPointer(1, 2, GL_FLOAT,
+                false, 0, 0);
+        gl.glEnableVertexAttribArray(1);
+
+        gl.glActiveTexture(GL_TEXTURE0);
+        gl.glBindTexture(GL_TEXTURE_2D, tex);
+
+        gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
         gl.glDrawArrays(GL_TRIANGLES, 0, 12);
+
+        gl.glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
         gl.glViewport(viewProp[0], viewProp[1], viewProp[2], viewProp[3]);
         gl.glEnable(GL_CULL_FACE);
