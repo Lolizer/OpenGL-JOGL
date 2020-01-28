@@ -1,8 +1,9 @@
-package com.mulaev.ardnya.Game;
+package com.mulaev.ardnya.Game.Orient;
 
 import com.jogamp.common.nio.Buffers;
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLContext;
+import com.mulaev.ardnya.Game.Util.MyUtil;
 import graphicslib3D.Matrix3D;
 
 import javax.swing.*;
@@ -22,7 +23,7 @@ import static com.jogamp.opengl.GL.GL_VIEWPORT;
 import static com.jogamp.opengl.GL2GL3.GL_FILL;
 import static com.jogamp.opengl.GL2GL3.GL_LINE;
 
-class Arrowhead {
+public class Arrowhead {
     private static Arrowhead instance;
     private static GL4 gl;
     private static int[] vao = new int[1];

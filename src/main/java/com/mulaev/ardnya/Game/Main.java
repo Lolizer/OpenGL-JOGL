@@ -8,10 +8,14 @@ import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.FPSAnimator;
+import com.mulaev.ardnya.Game.Entity.GrossTerrain;
 import com.mulaev.ardnya.Game.Entity.LoadedObject;
+import com.mulaev.ardnya.Game.Orient.Arrowhead;
 import com.mulaev.ardnya.Game.Parser.OBJFileLoader;
+import com.mulaev.ardnya.Game.Util.MyUtil;
 import graphicslib3D.GLSLUtils;
 import graphicslib3D.Matrix3D;
+import graphicslib3D.Point3D;
 import graphicslib3D.Vector3D;
 
 import javax.swing.*;
@@ -40,6 +44,9 @@ public class Main extends JFrame implements GLEventListener {
     private float lastX, lastY;
     private float pitch, yaw;
     private LoadedObject obj;
+    private LoadedObject obj2;
+    private LoadedObject obj3;
+    private GrossTerrain terrain;
 
     private GLSLUtils util;
     private FPSAnimator animator;
@@ -61,8 +68,10 @@ public class Main extends JFrame implements GLEventListener {
             @Override
             public void keyReleased(KeyEvent e) {
                 super.keyReleased(e);
-                if (e.getKeyCode() == KeyEvent.VK_T)
+                if (e.getKeyCode() == KeyEvent.VK_R)
                     obj.setCull(!obj.getCull());
+                if (e.getKeyCode() == KeyEvent.VK_T)
+                    obj.setPoly(!obj.getPoly());
             }
         });
 
@@ -156,9 +165,15 @@ public class Main extends JFrame implements GLEventListener {
         pMat = MyUtil.perspective(25.0f, aspect, 1.0f, 1000.0f);
         proj_loc = gl.glGetUniformLocation(rendering_program, "proj_matrix");
         mv_loc = gl.glGetUniformLocation(rendering_program, "mv_matrix");
-        obj = OBJFileLoader.loadOBJ("res/Buliding.obj").convertToLoadedObj(gl, pMat, proj_loc, mv_loc, false);
-        obj.setTex("water.jpg");
-        cameraPos = new Vector3D(.0, .0, 30.0);
+        obj = OBJFileLoader.loadOBJ("res/Buliding.obj").convertToLoadedObj(pMat, proj_loc, mv_loc, false);
+        obj.setTex("space.jpg");
+        obj2 = OBJFileLoader.loadOBJ("res/temple.obj").convertToLoadedObj(pMat, proj_loc, mv_loc, false);
+        obj2.setTex("template.png");
+        obj3 = OBJFileLoader.loadOBJ("res/man.obj").convertToLoadedObj(pMat, proj_loc, mv_loc, false);
+        obj3.setTex("pattern.jpg");
+        terrain = new GrossTerrain(10, new Point3D(0,-3.0,0), pMat, proj_loc, mv_loc);
+
+        cameraPos = new Vector3D(0.0, 3.0, 30.0);
         direction = new Vector3D(.0, .0, -1.0);
         up = new Vector3D(.0, 1.0, .0);
         lastX = getWidth() / 2; lastY = getHeight() / 2;
@@ -171,7 +186,7 @@ public class Main extends JFrame implements GLEventListener {
 
     public void display(GLAutoDrawable glAutoDrawable) {
         GL4 gl = (GL4) GLContext.getCurrentGL();
-
+        Matrix3D lookAt = MyUtil.lookAt(cameraPos, cameraPos.add(direction), up);
         gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         gl.glUseProgram(rendering_program);
@@ -181,15 +196,27 @@ public class Main extends JFrame implements GLEventListener {
         gl.glEnable(GL_CULL_FACE);
         //gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-        obj.setLookAt(MyUtil.lookAt(cameraPos, cameraPos.add(direction), up));
-
+        obj.setLookAt(lookAt);
         // build object's MV matrix
-        obj.translate(.0, .0, .0);
-
+        obj.translate(0.0, 0.0, -20.0);
         // add additional matrix for object's rotation and scale
-        obj.scale(.25, .25, .25);
-
+        obj.scale(.15, .15, .15);
         obj.draw();
+
+        //obj2.setStack(obj.getStack(true));
+        obj2.setLookAt(lookAt);
+        obj2.rotate(0.0, 180.0, 0.0);
+        obj2.translate(0.0, -2.0, 200.0);
+        obj2.scale(1.5, 1.5, 1.5);
+        obj2.draw();
+
+        obj3.setLookAt(lookAt);
+        obj3.rotate(0.0, 180.0, 0.0);
+        obj3.translate(0.0, 0.0, 150.0);
+        obj3.scale(0.15, 0.15, 0.15);
+        obj3.draw();
+
+        terrain.draw(lookAt);
 
         // pendulum sama
         Arrowhead.draw(this, pMat, pitch, yaw);

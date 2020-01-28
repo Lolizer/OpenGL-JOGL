@@ -1,4 +1,4 @@
-package com.mulaev.ardnya.Game;
+package com.mulaev.ardnya.Game.Util;
 
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLContext;

@@ -41,7 +41,7 @@ public class ModelData {
 		return furthestPoint;
 	}
 
-	public LoadedObject convertToLoadedObj(GL4 gl, Matrix3D pMat, int proj_loc, int mv_loc, boolean notBase) {
+	public LoadedObject convertToLoadedObj(Matrix3D pMat, int proj_loc, int mv_loc, boolean notBase) {
 		return new LoadedObject(pMat, proj_loc, mv_loc,
 				getVertices(), getTextureCoords(), getNormals(), getIndices(), notBase);
 	}
