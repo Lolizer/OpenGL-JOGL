@@ -46,6 +46,7 @@ public class LoadedObject implements Cloneable {
     private int[] indices;
     private int[] vao;
     private int[] vbo;
+    private int indAmt;
     private int tex;
     private int proj_loc;
     private int mv_loc;
@@ -58,7 +59,6 @@ public class LoadedObject implements Cloneable {
         this.gl = (GL4) GLContext.getCurrentGL();
         vao = new int[1];
         vbo = new int[4];
-        tex = -1;
         this.notBase = notBase;
         this.proj_loc = proj_loc;
         this.mv_loc = mv_loc;
@@ -69,6 +69,8 @@ public class LoadedObject implements Cloneable {
         this.pMat = pMat;
         position = new Point3D();
         model = new ModelStack(20);
+        tex = -1;
+        indAmt = indices.length;
 
         initBuffers();
     }
@@ -158,7 +160,7 @@ public class LoadedObject implements Cloneable {
     }
 
     public void draw() {
-        if (isCullingOn())
+        if (!isCullingOn())
             gl.glDisable(GL_CULL_FACE);
         if (isPolyOn())
             gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -190,7 +192,7 @@ public class LoadedObject implements Cloneable {
                 model.peek().getFloatValues(), 0);
 
         //gl.glDrawElements(GL_QUADS, getIndices().length, GL_UNSIGNED_INT, 0);
-        gl.glDrawElements(GL_TRIANGLES, getIndices().length, GL_UNSIGNED_INT, 0);
+        gl.glDrawElements(GL_TRIANGLES, getIndAmount(), GL_UNSIGNED_INT, 0);
         gl.glBindVertexArray(0);
 
         while (model.getStackCount() > 0) {
@@ -199,13 +201,14 @@ public class LoadedObject implements Cloneable {
 
         if (isPolyOn())
             gl.glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        if (isCullingOn())
+        if (!isCullingOn())
             gl.glEnable(GL_CULL_FACE);
     }
 
     public void dispose() {
         gl.glDeleteVertexArrays(vao.length, vao, 0);
         gl.glDeleteBuffers(vbo.length, vbo,0);
+        gl.glDeleteTextures(1, new int[]{tex}, 0);
     }
 
     public void setTex(String texLoc) { tex = MyUtil.loadTexture(texLoc).getTextureObject(); }
@@ -234,6 +237,17 @@ public class LoadedObject implements Cloneable {
         scale.scale(sx, sy, sz);
     }
 
+    public boolean isDataErased() {
+        return vertices == null && textures == null && normals == null && indices == null;
+    }
+
+    public void eraseData() {
+        vertices = null;
+        textures = null;
+        normals = null;
+        indices = null;
+    }
+
     public ModelStack getStack(boolean rot) {
         if (!rot || rotate == null)
             return retModel;
@@ -245,6 +259,7 @@ public class LoadedObject implements Cloneable {
     public float[] getTextures() {return textures;}
     public float[] getNormals() {return normals;}
     public int[] getIndices() {return indices;}
+    public int getIndAmount() {return indAmt;}
     public boolean getCull() {return culling;}
     public boolean getPoly() {return poly;}
     public Point3D getPosition() { return position; }

@@ -166,12 +166,12 @@ public class Main extends JFrame implements GLEventListener {
         proj_loc = gl.glGetUniformLocation(rendering_program, "proj_matrix");
         mv_loc = gl.glGetUniformLocation(rendering_program, "mv_matrix");
         obj = OBJFileLoader.loadOBJ("res/Buliding.obj").convertToLoadedObj(pMat, proj_loc, mv_loc, false);
-        obj.setTex("space.jpg");
+        obj.setTex("textures/space.jpg");
         obj2 = OBJFileLoader.loadOBJ("res/temple.obj").convertToLoadedObj(pMat, proj_loc, mv_loc, false);
-        obj2.setTex("template.png");
+        obj2.setTex("textures/template.png");
         obj3 = OBJFileLoader.loadOBJ("res/man.obj").convertToLoadedObj(pMat, proj_loc, mv_loc, false);
-        obj3.setTex("pattern.jpg");
-        terrain = new GrossTerrain(10, new Point3D(0,-3.0,0), pMat, proj_loc, mv_loc);
+        obj3.setTex("textures/pattern.jpg");
+        terrain = new GrossTerrain(7, new Point3D(0,-2.0,0), pMat, proj_loc, mv_loc);
 
         cameraPos = new Vector3D(0.0, 3.0, 30.0);
         direction = new Vector3D(.0, .0, -1.0);
@@ -198,7 +198,7 @@ public class Main extends JFrame implements GLEventListener {
 
         obj.setLookAt(lookAt);
         // build object's MV matrix
-        obj.translate(0.0, 0.0, -20.0);
+        obj.translate(0.0, 0.3, -20.0);
         // add additional matrix for object's rotation and scale
         obj.scale(.15, .15, .15);
         obj.draw();

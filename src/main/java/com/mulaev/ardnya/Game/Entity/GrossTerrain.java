@@ -16,7 +16,10 @@ public class GrossTerrain {
         LoadedObject inst = OBJFileLoader.loadOBJ("res/gross.obj").
                 convertToLoadedObj(pMat, proj_loc, mv_loc, false);
         int div = len / 2;
-        float offset = 300.0f;
+        float offset = 200.0f;
+
+        inst.eraseData();
+
         for (int i = 0; i < div + 1; i++) { // верт
             for (int j = 0; j < div + 1; j++) { // горизонт
                 // верх (слева и справа)
@@ -38,8 +41,8 @@ public class GrossTerrain {
 
     public void add(LoadedObject inst, Point3D pos, float zOffset, float xOffset) {
         inst.translate(pos.getX() + xOffset, pos.getY() + 0.0, pos.getZ() + zOffset);
-        inst.scale(2.5, 0.3, 2.5);
-        inst.setTex("gross.jpg");
+        inst.scale(5.2, 1.0, 7.2);
+        inst.setTex("textures/gross.jpg");
         plates.add(inst);
     }
 

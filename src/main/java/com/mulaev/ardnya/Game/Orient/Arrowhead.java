@@ -62,7 +62,7 @@ public class Arrowhead {
         rendering_program = MyUtil.createShaderProgram(vertex,
                 fragment, this.getClass().getSimpleName());
 
-        tex = MyUtil.loadTexture("arrowhead.jpg").getTextureObject();
+        tex = MyUtil.loadTexture("textures/arrowhead.jpg").getTextureObject();
 
         proj_loc = gl.glGetUniformLocation(rendering_program, "proj_matrix");
         mv_loc = gl.glGetUniformLocation(rendering_program, "mv_matrix");
