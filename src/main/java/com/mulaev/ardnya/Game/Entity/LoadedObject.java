@@ -53,6 +53,7 @@ public class LoadedObject implements Cloneable {
     private boolean culling;
     private boolean poly;
     private boolean notBase;
+    private boolean erased;
 
     public LoadedObject(Matrix3D pMat, int proj_loc, int mv_loc,
             float[] vertices, float[] textures, float[] normals, int[] indices, boolean notBase) {
@@ -73,6 +74,7 @@ public class LoadedObject implements Cloneable {
         indAmt = indices.length;
 
         initBuffers();
+        eraseData();
     }
 
     private void initBuffers() {
@@ -109,7 +111,7 @@ public class LoadedObject implements Cloneable {
         gl.glBindVertexArray(0);
     }
 
-    private boolean isCullingOn() { return !culling; }
+    private boolean isCullingOff() { return culling; }
 
     private boolean isPolyOn() { return poly; }
 
@@ -159,8 +161,31 @@ public class LoadedObject implements Cloneable {
         }
     }
 
+    private void eraseData() {
+        vertices = null;
+        if (textures != null)
+            erased = true;
+        textures = null;
+        normals = null;
+        indices = null;
+
+        new Thread(() -> {
+            try {
+                System.gc();
+                Thread.sleep(10);
+                System.gc();
+            } catch (InterruptedException ie) {
+                ie.printStackTrace();
+            }
+        }).start();
+    }
+
+    private boolean wasErased() {
+        return erased;
+    }
+
     public void draw() {
-        if (!isCullingOn())
+        if (isCullingOff())
             gl.glDisable(GL_CULL_FACE);
         if (isPolyOn())
             gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -170,7 +195,7 @@ public class LoadedObject implements Cloneable {
         gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
         gl.glEnableVertexAttribArray(0);
 
-        if (textures != null) {
+        if (textures != null || wasErased()) {
             // activate buffer #1, which contains the texture coordinates
             gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
             gl.glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
@@ -201,7 +226,7 @@ public class LoadedObject implements Cloneable {
 
         if (isPolyOn())
             gl.glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        if (!isCullingOn())
+        if (isCullingOff())
             gl.glEnable(GL_CULL_FACE);
     }
 
@@ -237,17 +262,6 @@ public class LoadedObject implements Cloneable {
         scale.scale(sx, sy, sz);
     }
 
-    public boolean isDataErased() {
-        return vertices == null && textures == null && normals == null && indices == null;
-    }
-
-    public void eraseData() {
-        vertices = null;
-        textures = null;
-        normals = null;
-        indices = null;
-    }
-
     public ModelStack getStack(boolean rot) {
         if (!rot || rotate == null)
             return retModel;
@@ -255,10 +269,7 @@ public class LoadedObject implements Cloneable {
         retModel.multMatrix(rotate);
         return retModel;
     }
-    public float[] getVertices() {return vertices;}
-    public float[] getTextures() {return textures;}
-    public float[] getNormals() {return normals;}
-    public int[] getIndices() {return indices;}
+
     public int getIndAmount() {return indAmt;}
     public boolean getCull() {return culling;}
     public boolean getPoly() {return poly;}
