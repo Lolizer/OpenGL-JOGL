@@ -60,7 +60,7 @@ public class Arrowhead {
         String vertex = "shaders/arrowhead_vert.shader";
         String fragment = "shaders/arrowhead_frag.shader";
         rendering_program = MyUtil.createShaderProgram(vertex,
-                fragment, this.getClass().getSimpleName());
+                fragment, this.getClass().getSimpleName(), 15, 13);
 
         tex = MyUtil.loadTexture("textures/arrowhead.jpg").getTextureObject();
 

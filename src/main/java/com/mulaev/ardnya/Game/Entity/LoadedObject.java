@@ -4,6 +4,7 @@ import com.jogamp.common.nio.Buffers;
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLContext;
 import com.mulaev.ardnya.Game.Util.MyUtil;
+import graphicslib3D.Material;
 import graphicslib3D.Matrix3D;
 import graphicslib3D.Point3D;
 
@@ -40,6 +41,7 @@ public class LoadedObject implements Cloneable {
     private Matrix3D scale;
     private ModelStack model;
     private ModelStack retModel;
+    private Material currentMaterial;
     private float[] vertices;
     private float[] textures;
     private float[] normals;
@@ -50,19 +52,23 @@ public class LoadedObject implements Cloneable {
     private int tex;
     private int proj_loc;
     private int mv_loc;
+    private int n_loc;
+    private int rendering_program;
     private boolean culling;
     private boolean poly;
     private boolean notBase;
     private boolean erased;
 
-    public LoadedObject(Matrix3D pMat, int proj_loc, int mv_loc,
+    public LoadedObject(Matrix3D pMat, int rendering_program, int proj_loc, int mv_loc, int n_loc,
             float[] vertices, float[] textures, float[] normals, int[] indices, boolean notBase) {
         this.gl = (GL4) GLContext.getCurrentGL();
+        this.rendering_program = rendering_program;
         vao = new int[1];
         vbo = new int[4];
         this.notBase = notBase;
         this.proj_loc = proj_loc;
         this.mv_loc = mv_loc;
+        this.n_loc = n_loc;
         this.vertices = vertices;
         this.textures = textures;
         this.normals = normals;
@@ -72,6 +78,7 @@ public class LoadedObject implements Cloneable {
         model = new ModelStack(20);
         tex = -1;
         indAmt = indices.length;
+        currentMaterial = Material.GOLD;
 
         initBuffers();
         eraseData();
@@ -99,6 +106,10 @@ public class LoadedObject implements Cloneable {
             // put the normal coordinates into buffer #2
             gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
             FloatBuffer norBuf = Buffers.newDirectFloatBuffer(normals);
+            gl.glBufferData(GL_ARRAY_BUFFER, norBuf.limit() * 4, norBuf, GL_STATIC_DRAW);
+        } else {
+            gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+            FloatBuffer norBuf = Buffers.newDirectFloatBuffer(new float[getIndAmount()]);
             gl.glBufferData(GL_ARRAY_BUFFER, norBuf.limit() * 4, norBuf, GL_STATIC_DRAW);
         }
         if (indices != null) {
@@ -161,6 +172,26 @@ public class LoadedObject implements Cloneable {
         }
     }
 
+    private void installMat() {
+        int MambLoc = gl.glGetUniformLocation(rendering_program,
+                "material.ambient");
+        int MdiffLoc = gl.glGetUniformLocation(rendering_program,
+                "material.diffuse");
+        int MspecLoc = gl.glGetUniformLocation(rendering_program,
+                "material.specular");
+        int MshiLoc = gl.glGetUniformLocation(rendering_program,
+                "material.shininess");
+
+        gl.glProgramUniform4fv(rendering_program, MambLoc, 1,
+                currentMaterial.getAmbient(), 0);
+        gl.glProgramUniform4fv(rendering_program, MdiffLoc, 1,
+                currentMaterial.getDiffuse(), 0);
+        gl.glProgramUniform4fv(rendering_program, MspecLoc, 1,
+                currentMaterial.getSpecular(), 0);
+        gl.glProgramUniform1f(rendering_program, MshiLoc,
+                currentMaterial.getShininess());
+    }
+
     private void eraseData() {
         vertices = null;
         if (textures != null)
@@ -190,6 +221,8 @@ public class LoadedObject implements Cloneable {
         if (isPolyOn())
             gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+        installMat();
+
         gl.glBindVertexArray(vao[0]);
         gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
         gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
@@ -201,6 +234,11 @@ public class LoadedObject implements Cloneable {
             gl.glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
             gl.glEnableVertexAttribArray(1);
         }
+
+        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+        gl.glVertexAttribPointer(2, 3, GL_FLOAT, false, 0, 0);
+        gl.glEnableVertexAttribArray(2);
+
         // indices
         gl.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
 
@@ -215,6 +253,8 @@ public class LoadedObject implements Cloneable {
                 pMat.getFloatValues(), 0);
         gl.glUniformMatrix4fv(mv_loc, 1, false,
                 model.peek().getFloatValues(), 0);
+        gl.glUniformMatrix4fv(n_loc, 1, false,
+                (model.peek().inverse()).transpose().getFloatValues(), 0);
 
         //gl.glDrawElements(GL_QUADS, getIndices().length, GL_UNSIGNED_INT, 0);
         gl.glDrawElements(GL_TRIANGLES, getIndAmount(), GL_UNSIGNED_INT, 0);

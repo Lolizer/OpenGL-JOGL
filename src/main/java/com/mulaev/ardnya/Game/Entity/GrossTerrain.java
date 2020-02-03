@@ -12,11 +12,11 @@ public class GrossTerrain {
     private ArrayList<Pair<Float, Float>> coords;
     private Point3D pos;
 
-    public GrossTerrain(int len, Point3D pos, Matrix3D pMat, int proj_loc, int mv_loc) {
+    public GrossTerrain(int len, Point3D pos, Matrix3D pMat, int rendering_program, int proj_loc, int mv_loc, int n_loc) {
         this.pos = pos;
         coords = new ArrayList<Pair<Float, Float>>();
         inst = OBJFileLoader.loadOBJ("res/gross.obj").
-                convertToLoadedObj(pMat, proj_loc, mv_loc, false);
+                convertToLoadedObj(pMat, rendering_program, proj_loc, mv_loc, n_loc,false);
 
         inst.scale(5.2, 1.0, 7.2);
         inst.setTex("textures/gross.jpg");

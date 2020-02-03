@@ -32,7 +32,8 @@ public class MyUtil {
         return tex;
     }
 
-    public static int createShaderProgram(String vShaderPath, String fShaderPath, String loc) {
+    public static int createShaderProgram(
+            String vShaderPath, String fShaderPath, String loc, int vlength, int flength) {
         int[ ] vertCompiled = new int[1];
         int[ ] fragCompiled = new int[1];
         int[ ] linked = new int[1];
@@ -43,7 +44,7 @@ public class MyUtil {
         String fshaderSource[] = readShaderSource("shaders/frag.shader");*/
 
         int vShader = gl.glCreateShader(GL_VERTEX_SHADER);
-        gl.glShaderSource(vShader, 15, vshaderSource, null, 0); // note: 3 lines of code
+        gl.glShaderSource(vShader, vlength, vshaderSource, null, 0); // note: 3 lines of code
         gl.glCompileShader(vShader);
 
         System.out.println(loc);
@@ -58,7 +59,7 @@ public class MyUtil {
         }
 
         int fShader = gl.glCreateShader(GL_FRAGMENT_SHADER);
-        gl.glShaderSource(fShader, 13, fshaderSource, null, 0); // note: 4 lines of code
+        gl.glShaderSource(fShader, flength, fshaderSource, null, 0); // note: 4 lines of code
         gl.glCompileShader(fShader);
 
         checkOpenGLError();

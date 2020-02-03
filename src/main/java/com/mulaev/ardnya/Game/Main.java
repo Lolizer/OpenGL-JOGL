@@ -10,6 +10,7 @@ import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.FPSAnimator;
 import com.mulaev.ardnya.Game.Entity.GrossTerrain;
 import com.mulaev.ardnya.Game.Entity.LoadedObject;
+import com.mulaev.ardnya.Game.Lights.Point;
 import com.mulaev.ardnya.Game.Orient.Arrowhead;
 import com.mulaev.ardnya.Game.Parser.OBJFileLoader;
 import com.mulaev.ardnya.Game.Util.ControlSampler;
@@ -39,7 +40,9 @@ public class Main extends JFrame implements GLEventListener {
     private int rendering_program;
     private int proj_loc;
     private int mv_loc;
+    private int n_loc;
     private ControlSampler control;
+    private Point glob;
     private LoadedObject obj;
     private LoadedObject obj2;
     private LoadedObject obj3;
@@ -77,18 +80,25 @@ public class Main extends JFrame implements GLEventListener {
         GL4 gl = (GL4) GLContext.getCurrentGL();
         util = new GLSLUtils();
         rendering_program = MyUtil.createShaderProgram("shaders/vert.shader",
-                "shaders/frag.shader", this.getClass().getSimpleName());
+                "shaders/frag.shader", this.getClass().getSimpleName(),
+                58, 34);
         float aspect = (float) myCanvas.getWidth() / (float) myCanvas.getHeight();
         pMat = MyUtil.perspective(25.0f, aspect, 1.0f, 1000.0f);
         proj_loc = gl.glGetUniformLocation(rendering_program, "proj_matrix");
         mv_loc = gl.glGetUniformLocation(rendering_program, "mv_matrix");
-        obj = OBJFileLoader.loadOBJ("res/Buliding.obj").convertToLoadedObj(pMat, proj_loc, mv_loc, false);
+        n_loc = gl.glGetUniformLocation(rendering_program, "norm_matrix");
+        obj = OBJFileLoader.loadOBJ("res/Buliding.obj").
+                convertToLoadedObj(pMat, rendering_program, proj_loc, mv_loc, n_loc, false);
         obj.setTex("textures/space.jpg");
-        obj2 = OBJFileLoader.loadOBJ("res/temple.obj").convertToLoadedObj(pMat, proj_loc, mv_loc, false);
+        obj2 = OBJFileLoader.loadOBJ("res/temple.obj").
+                convertToLoadedObj(pMat, rendering_program, proj_loc, mv_loc, n_loc,false);
         obj2.setTex("textures/template.png");
-        obj3 = OBJFileLoader.loadOBJ("res/man.obj").convertToLoadedObj(pMat, proj_loc, mv_loc, false);
+        obj3 = OBJFileLoader.loadOBJ("res/man.obj").
+                convertToLoadedObj(pMat, rendering_program, proj_loc, mv_loc, n_loc, false);
         obj3.setTex("textures/pattern.jpg");
-        terrain = new GrossTerrain(7, new Point3D(0,-2.0,0), pMat, proj_loc, mv_loc);
+        terrain = new GrossTerrain(7, new Point3D(0,-2.0,0),
+                pMat, rendering_program, proj_loc, mv_loc, n_loc);
+        glob = new Point(rendering_program);
 
         myCanvas.addKeyListener(control.getOptionListener(obj));
         myCanvas.addKeyListener(control.getMotionListener());
@@ -102,7 +112,8 @@ public class Main extends JFrame implements GLEventListener {
 
     public void display(GLAutoDrawable glAutoDrawable) {
         GL4 gl = (GL4) GLContext.getCurrentGL();
-        Matrix3D lookAt = MyUtil.lookAt(control.getCameraPos(), control.getCameraPos().add(control.getDirection()), control.getUp());
+        Matrix3D lookAt = MyUtil.lookAt(
+                control.getCameraPos(), control.getCameraPos().add(control.getDirection()), control.getUp());
         gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         gl.glUseProgram(rendering_program);
@@ -111,6 +122,8 @@ public class Main extends JFrame implements GLEventListener {
         gl.glDepthFunc(GL_LEQUAL);
         gl.glEnable(GL_CULL_FACE);
         //gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+        glob.installLights(lookAt, rendering_program);
 
         obj.setLookAt(lookAt);
         // build object's MV matrix
