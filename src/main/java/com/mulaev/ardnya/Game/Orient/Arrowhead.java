@@ -136,6 +136,7 @@ public class Arrowhead {
         gl.glGetIntegerv(GL_VIEWPORT, viewProp, 0);
         gl.glViewport(0, frame.getHeight() - 32 - height, width, height);
 
+        gl.glBindVertexArray(vao[0]);
         // отрисовка линий
         gl.glUniformMatrix4fv(proj_loc, 1, false,
                 ortho.getFloatValues(), 0);
@@ -169,6 +170,8 @@ public class Arrowhead {
         gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
         gl.glDrawArrays(GL_TRIANGLES, 0, 12);
+
+        gl.glBindVertexArray(0);
 
         gl.glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 

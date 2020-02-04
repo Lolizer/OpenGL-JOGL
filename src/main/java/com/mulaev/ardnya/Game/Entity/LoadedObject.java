@@ -3,6 +3,7 @@ package com.mulaev.ardnya.Game.Entity;
 import com.jogamp.common.nio.Buffers;
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLContext;
+import com.mulaev.ardnya.Game.Lights.Point;
 import com.mulaev.ardnya.Game.Util.MyUtil;
 import graphicslib3D.Material;
 import graphicslib3D.Matrix3D;
@@ -222,6 +223,8 @@ public class LoadedObject implements Cloneable {
             gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
         installMat();
+
+        Point.getInstance().installLights(lookAt, rendering_program);
 
         gl.glBindVertexArray(vao[0]);
         gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);

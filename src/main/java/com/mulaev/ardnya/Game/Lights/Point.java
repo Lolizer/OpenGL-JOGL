@@ -8,9 +8,11 @@ import graphicslib3D.light.PositionalLight;
 
 public class Point {
     private static float [ ] globalAmbient;
+    private static Point instance;
     private PositionalLight currentLight;
     private Point3D lightLoc;
     private int rendering_program;
+    private int globalAmbLoc;
     private int ambLoc;
     private int diffLoc;
     private int specLoc;
@@ -30,12 +32,14 @@ public class Point {
         specLoc = gl.glGetUniformLocation(rendering_program,
                 "light.specular");
         posLoc = gl.glGetUniformLocation(rendering_program, "light.position");
+
+        instance = this;
     }
 
     private void installGlobal() {
         GL4 gl = (GL4) GLContext.getCurrentGL();
         // set the current globalAmbient settings
-        int globalAmbLoc = gl.glGetUniformLocation(rendering_program,
+        globalAmbLoc = gl.glGetUniformLocation(rendering_program,
                 "globalAmbient");
         gl.glProgramUniform4fv(rendering_program, globalAmbLoc, 1, globalAmbient,
                 0);
@@ -45,6 +49,10 @@ public class Point {
         if (globalAmbient != null)
             Point.globalAmbient = globalAmbient;
         else Point.globalAmbient = new float[ ] { 0.7f, 0.7f, 0.7f, 1.0f };
+    }
+
+    public static Point getInstance() {
+        return instance;
     }
 
     public void installLights(Matrix3D v_matrix, int rendering_program)

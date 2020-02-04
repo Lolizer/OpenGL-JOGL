@@ -57,7 +57,7 @@ public class GrossTerrain {
         }
     }
 
-    public Point3D getPose() {
+    public Point3D getPos() {
         return pos;
     }
 }
