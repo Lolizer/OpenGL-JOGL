@@ -55,7 +55,7 @@ public class Point {
         return instance;
     }
 
-    public void installLights(Matrix3D v_matrix, int rendering_program)
+    public void installLights(Matrix3D v_matrix)
     {
         GL4 gl = (GL4) GLContext.getCurrentGL();
         installGlobal();

@@ -123,7 +123,7 @@ public class Main extends JFrame implements GLEventListener {
         gl.glEnable(GL_CULL_FACE);
         //gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-        glob.installLights(lookAt, rendering_program);
+        //glob.installLights(lookAt);
 
         obj.setLookAt(lookAt);
         // build object's MV matrix

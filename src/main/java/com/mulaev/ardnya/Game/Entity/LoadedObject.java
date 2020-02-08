@@ -159,7 +159,7 @@ public class LoadedObject implements Cloneable {
     }
 
     private void setUpTex() {
-        // activate texture unit #0 and bind it to the texture object
+        // activate texture unit #1 and bind it to the texture object
         gl.glActiveTexture(GL_TEXTURE1);
         gl.glBindTexture(GL_TEXTURE_2D, tex);
         gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -222,11 +222,10 @@ public class LoadedObject implements Cloneable {
         if (isPolyOn())
             gl.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-        installMat();
-
-        Point.getInstance().installLights(lookAt, rendering_program);
-
         gl.glBindVertexArray(vao[0]);
+        installMat();
+        Point.getInstance().installLights(lookAt);
+
         gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
         gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
         gl.glEnableVertexAttribArray(0);
