@@ -32,6 +32,8 @@ public class Point {
         specLoc = gl.glGetUniformLocation(rendering_program,
                 "light.specular");
         posLoc = gl.glGetUniformLocation(rendering_program, "light.position");
+        globalAmbLoc = gl.glGetUniformLocation(rendering_program,
+                "globalAmbient");
 
         instance = this;
     }
@@ -39,8 +41,6 @@ public class Point {
     private void installGlobal() {
         GL4 gl = (GL4) GLContext.getCurrentGL();
         // set the current globalAmbient settings
-        globalAmbLoc = gl.glGetUniformLocation(rendering_program,
-                "globalAmbient");
         gl.glProgramUniform4fv(rendering_program, globalAmbLoc, 1, globalAmbient,
                 0);
     }

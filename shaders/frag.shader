@@ -29,6 +29,6 @@ layout (binding=1) uniform sampler2D samp;
 
 void main(void)
 { 
-  color = varyingColor;
+  color = varyingColor * texture(samp, tc);
   //color = texture(samp, tc);
 }

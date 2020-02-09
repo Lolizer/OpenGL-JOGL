@@ -54,6 +54,10 @@ public class LoadedObject implements Cloneable {
     private int proj_loc;
     private int mv_loc;
     private int n_loc;
+    private int MambLoc;
+    private int MdiffLoc;
+    private int MspecLoc;
+    private int MshiLoc;
     private int rendering_program;
     private boolean culling;
     private boolean poly;
@@ -83,6 +87,15 @@ public class LoadedObject implements Cloneable {
 
         initBuffers();
         eraseData();
+
+        MambLoc = gl.glGetUniformLocation(rendering_program,
+                "material.ambient");
+        MdiffLoc = gl.glGetUniformLocation(rendering_program,
+                "material.diffuse");
+        MspecLoc = gl.glGetUniformLocation(rendering_program,
+                "material.specular");
+        MshiLoc = gl.glGetUniformLocation(rendering_program,
+                "material.shininess");
     }
 
     private void initBuffers() {
@@ -174,15 +187,6 @@ public class LoadedObject implements Cloneable {
     }
 
     private void installMat() {
-        int MambLoc = gl.glGetUniformLocation(rendering_program,
-                "material.ambient");
-        int MdiffLoc = gl.glGetUniformLocation(rendering_program,
-                "material.diffuse");
-        int MspecLoc = gl.glGetUniformLocation(rendering_program,
-                "material.specular");
-        int MshiLoc = gl.glGetUniformLocation(rendering_program,
-                "material.shininess");
-
         gl.glProgramUniform4fv(rendering_program, MambLoc, 1,
                 currentMaterial.getAmbient(), 0);
         gl.glProgramUniform4fv(rendering_program, MdiffLoc, 1,
