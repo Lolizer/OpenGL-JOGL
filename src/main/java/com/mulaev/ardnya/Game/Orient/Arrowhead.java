@@ -1,6 +1,8 @@
 package com.mulaev.ardnya.Game.Orient;
 
 import com.jogamp.common.nio.Buffers;
+import com.jogamp.newt.opengl.GLWindow;
+import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLContext;
 import com.mulaev.ardnya.Game.Util.MyUtil;
@@ -107,7 +109,7 @@ public class Arrowhead {
         return false;
     }
 
-    public static void draw(JFrame frame,
+    public static void draw(GLWindow glWindow,
             Matrix3D pMat, float pitch, float yaw) {
 
         if (instance == null)
@@ -134,7 +136,7 @@ public class Arrowhead {
 
         // сохранение свойств viewport'a
         gl.glGetIntegerv(GL_VIEWPORT, viewProp, 0);
-        gl.glViewport(0, frame.getHeight() - 32 - height, width, height);
+        gl.glViewport(0, glWindow.getHeight() - 32 - height, width, height);
 
         gl.glBindVertexArray(vao[0]);
         // отрисовка линий

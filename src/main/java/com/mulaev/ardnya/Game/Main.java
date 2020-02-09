@@ -1,5 +1,11 @@
 package com.mulaev.ardnya.Game;
 
+import com.jogamp.nativewindow.WindowClosingProtocol;
+import com.jogamp.newt.awt.NewtCanvasAWT;
+import com.jogamp.newt.event.WindowAdapter;
+import com.jogamp.newt.event.WindowEvent;
+import com.jogamp.newt.event.awt.AWTMouseAdapter;
+import com.jogamp.newt.opengl.GLWindow;
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
@@ -34,8 +40,7 @@ import static com.jogamp.opengl.GL.GL_DEPTH_BUFFER_BIT;
 import static com.jogamp.opengl.GL.GL_DEPTH_TEST;
 import static com.jogamp.opengl.GL.GL_LEQUAL;
 
-public class Main extends JFrame implements GLEventListener {
-    private GLCanvas myCanvas;
+public class Main implements GLEventListener {
     private Matrix3D pMat;
     private int rendering_program;
     private int proj_loc;
@@ -47,6 +52,7 @@ public class Main extends JFrame implements GLEventListener {
     private LoadedObject obj2;
     private LoadedObject obj3;
     private GrossTerrain terrain;
+    private GLWindow glWindow;
 
     private GLSLUtils util;
     private FPSAnimator animator;
@@ -56,19 +62,32 @@ public class Main extends JFrame implements GLEventListener {
         caps.setSampleBuffers(true);
         caps.setNumSamples(8);
 
-        setTitle("Game");
-        setSize(800, 600);
-        setMinimumSize(getSize());
-        setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        myCanvas = new GLCanvas(caps);
-        myCanvas.addGLEventListener(this);
-        control = new ControlSampler(this);
+        glWindow = GLWindow.create(caps);
 
-        this.add(myCanvas);
-        setVisible(true);
+        glWindow.setTitle("Game");
+        glWindow.setSize(800, 600);
+        glWindow.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowResized(WindowEvent windowEvent) {
+                super.windowResized(windowEvent);
+                if (glWindow.getWidth() <= 800)
+                    glWindow.setSize(800, glWindow.getHeight());
+                if (glWindow.getHeight() <= 600)
+                    glWindow.setSize(glWindow.getWidth(), 600);
+            }
+        });
 
-        animator = new FPSAnimator(myCanvas, 60);
+        glWindow.setDefaultCloseOperation(WindowClosingProtocol.WindowClosingMode.DISPOSE_ON_CLOSE);
+
+        glWindow.addGLEventListener(this);
+        control = new ControlSampler(glWindow);
+        glWindow.addKeyListener(control.getMotionListener());
+        glWindow.addMouseListener(control.getRotationListener(glWindow));
+        glWindow.addMouseListener(control.getRotationEndListener(glWindow));
+
+        glWindow.setVisible(true);
+
+        animator = new FPSAnimator(glWindow, 60);
         animator.start();
     }
 
@@ -82,7 +101,7 @@ public class Main extends JFrame implements GLEventListener {
         rendering_program = MyUtil.createShaderProgram("shaders/vert.shader",
                 "shaders/frag.shader", this.getClass().getSimpleName(),
                 58, 34);
-        float aspect = (float) myCanvas.getWidth() / (float) myCanvas.getHeight();
+        float aspect = (float) glWindow.getWidth() / (float) glWindow.getHeight();
         pMat = MyUtil.perspective(25.0f, aspect, 1.0f, 1000.0f);
         proj_loc = gl.glGetUniformLocation(rendering_program, "proj_matrix");
         mv_loc = gl.glGetUniformLocation(rendering_program, "mv_matrix");
@@ -100,10 +119,7 @@ public class Main extends JFrame implements GLEventListener {
                 pMat, rendering_program, proj_loc, mv_loc, n_loc);
         glob = new Point(rendering_program);
 
-        myCanvas.addKeyListener(control.getOptionListener(obj));
-        myCanvas.addKeyListener(control.getMotionListener());
-        myCanvas.addMouseMotionListener(control.getRotationListener(this));
-        myCanvas.addMouseListener(control.getRotationEndListener(this));
+        glWindow.addKeyListener(control.getOptionListener(obj));
     }
 
     public void dispose(GLAutoDrawable glAutoDrawable) {
@@ -148,7 +164,7 @@ public class Main extends JFrame implements GLEventListener {
         terrain.draw(lookAt);
 
         // pendulum sama
-        Arrowhead.draw(this, pMat, control.getPitch(), control.getYaw());
+        Arrowhead.draw(glWindow, pMat, control.getPitch(), control.getYaw());
     }
 
     public void reshape(GLAutoDrawable glAutoDrawable, int i, int i1, int i2, int i3) {

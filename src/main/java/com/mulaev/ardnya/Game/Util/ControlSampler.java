@@ -1,17 +1,16 @@
 package com.mulaev.ardnya.Game.Util;
 
+import com.jogamp.newt.event.KeyAdapter;
+import com.jogamp.newt.event.KeyEvent;
+import com.jogamp.newt.event.KeyListener;
+import com.jogamp.newt.event.MouseAdapter;
+import com.jogamp.newt.event.MouseEvent;
+import com.jogamp.newt.event.MouseListener;
+import com.jogamp.newt.opengl.GLWindow;
 import com.mulaev.ardnya.Game.Entity.LoadedObject;
 import graphicslib3D.Vector3D;
 
 import javax.swing.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionAdapter;
-import java.awt.event.MouseMotionListener;
 
 public class ControlSampler {
     private Vector3D up;
@@ -22,7 +21,7 @@ public class ControlSampler {
     private long lastRCTime;
     private long lastMCTime;
 
-    public ControlSampler(JFrame frame) {
+    public ControlSampler(GLWindow frame) {
         cameraPos = new Vector3D(0.0, 3.0, 30.0);
         direction = new Vector3D(.0, .0, -1.0);
         up = new Vector3D(.0, 1.0, .0);
@@ -43,7 +42,7 @@ public class ControlSampler {
         };
     }
 
-    public KeyListener getMotionListener() {
+    public KeyAdapter getMotionListener() {
         return new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -119,11 +118,11 @@ public class ControlSampler {
         };
     }
 
-    public MouseMotionListener getRotationListener(JFrame frame) {
-        return new MouseMotionAdapter() {
+    public MouseListener getRotationListener(GLWindow frame) {
+        return new MouseAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
-                if (!SwingUtilities.isMiddleMouseButton(e))
+                if (!e.isButtonDown(MouseEvent.BUTTON2))
                     return;
 
                 int xOnScreen = e.getX();
@@ -172,14 +171,15 @@ public class ControlSampler {
         };
     }
 
-    public MouseListener getRotationEndListener(JFrame frame) {
+    public MouseListener getRotationEndListener(GLWindow frame) {
         return new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
-                if (SwingUtilities.isMiddleMouseButton(e)) {
-                    lastX = frame.getWidth() / 2;
-                    lastY = frame.getHeight() /2;
-                }
+                if (!e.isButtonDown(MouseEvent.BUTTON2))
+                    return;
+
+                lastX = frame.getWidth() / 2;
+                lastY = frame.getHeight() / 2;
             }
         };
     }
